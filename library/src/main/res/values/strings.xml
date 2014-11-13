@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">VPN-Server</string>
+    <string name="permission_description">Allows another app to control OpenVPN</string>
+</resources>
