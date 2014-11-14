@@ -14,7 +14,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 
+import de.blinkt.openvpn.api.APIVpnProfile;
 import de.blinkt.openvpn.api.IOpenVPNAPIService;
 import de.blinkt.openvpn.api.IOpenVPNStatusCallback;
 
@@ -209,6 +211,9 @@ public class VpnHelper implements Handler.Callback{
     }
 
     public IOpenVPNAPIService getApiInterface() {
+        if (mService == null){
+            bindToService();
+        }
         return mService;
     }
 
@@ -220,6 +225,12 @@ public class VpnHelper implements Handler.Callback{
     public boolean addProfile(String name, String config) {
         if (getApiInterface() != null){
             try {
+                ProfileList<APIVpnProfile> profileList = getProfileList();
+
+                if (profileList.findByName(name) != null){
+                    return false;
+                }
+
                 return getApiInterface().addVPNProfile(name, config);
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -248,6 +259,37 @@ public class VpnHelper implements Handler.Callback{
             try {
                 getApiInterface().disconnect();
                 return true;
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return false;
+    }
+
+    public ProfileList<APIVpnProfile> getProfileList() {
+        if (getApiInterface() != null){
+            try {
+                List<APIVpnProfile> list = getApiInterface().getProfiles();
+                ProfileList<APIVpnProfile> profileList = new ProfileList<>();
+                if (list != null && list.size() > 0)
+                profileList.addAll(list);
+                return profileList;
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    public boolean startProfile(String profileName) {
+        if (getApiInterface() != null){
+            APIVpnProfile profile = getProfileList().findByName(profileName);
+            try {
+                if (profile != null){
+                    getApiInterface().startProfile(profile.mUUID);
+                    return true;
+                }
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
