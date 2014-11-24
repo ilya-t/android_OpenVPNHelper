@@ -27,11 +27,14 @@ public class VpnHelper implements Handler.Callback{
     public static final int START_PROFILE_BYUUID = 3;
     private static final int ICS_OPENVPN_PERMISSION = 7;
 
+    public interface VpnStatusChangeListener{
+        void onVpnStatusChanged(String uuid, String state, String message, String level);
+    }
     private boolean isConnected;
 
     private final Activity activity;
-    protected IOpenVPNAPIService mService=null;
 
+    protected IOpenVPNAPIService mService=null;
     private ActivityCallback activityCallback = new ActivityCallback() {
         @Override
         public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -58,6 +61,8 @@ public class VpnHelper implements Handler.Callback{
         }
     };
 
+    private VpnStatusChangeListener statusChangeListener;
+
     private IOpenVPNStatusCallback mCallback = new IOpenVPNStatusCallback.Stub() {
         /**
          * This is called by the remote service regularly to tell us about
@@ -72,7 +77,9 @@ public class VpnHelper implements Handler.Callback{
                 throws RemoteException {
             Message msg = Message.obtain(mHandler, MSG_UPDATE_STATE, state + "|" + message);
             msg.sendToTarget();
-
+            if (statusChangeListener != null){
+                statusChangeListener.onVpnStatusChanged(uuid, state, message, level);
+            }
         }
 
     };
@@ -112,7 +119,6 @@ public class VpnHelper implements Handler.Callback{
             isConnected = false;
         }
     };
-
     private String mStartUUID=null;
 
     private Handler mHandler;
@@ -149,10 +155,7 @@ public class VpnHelper implements Handler.Callback{
 
             //			mService.addVPNProfile("test", config);
             mService.startVPN(config);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (RemoteException e) {
-            // TODO Auto-generated catch block
+        } catch (RemoteException | IOException e) {
             e.printStackTrace();
         }
     }
@@ -217,7 +220,6 @@ public class VpnHelper implements Handler.Callback{
         return mService;
     }
 
-
     public boolean isConnected() {
         return isConnected;
     }
@@ -253,7 +255,6 @@ public class VpnHelper implements Handler.Callback{
         return false;
     }
 
-
     public boolean disconnect() {
         if (getApiInterface() != null){
             try {
@@ -288,7 +289,6 @@ public class VpnHelper implements Handler.Callback{
             try {
                 if (profile != null){
                     getApiInterface().startProfile(profile.mUUID);
-                    return true;
                 }
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -296,5 +296,9 @@ public class VpnHelper implements Handler.Callback{
         }
 
         return false;
+    }
+
+    public void setOnStatusChangeListener(VpnStatusChangeListener statusChangeListener) {
+        this.statusChangeListener = statusChangeListener;
     }
 }
